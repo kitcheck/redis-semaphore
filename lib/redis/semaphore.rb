@@ -36,7 +36,7 @@ class Redis
         if token == API_VERSION && @redis.get(version_key).nil?
           @redis.set(version_key, API_VERSION)
         end
-
+        set_expiration_if_necessary
         true
       end
     end
@@ -59,7 +59,6 @@ class Redis
     def lock(timeout = 0)
       exists_or_create!
       release_stale_locks! if check_staleness?
-
       token_pair = @redis.blpop(available_key, timeout)
       return false if token_pair.nil?
 
@@ -157,8 +156,6 @@ class Redis
     end
 
     def create!
-      @redis.expire(exists_key, 10)
-
       @redis.multi do
         @redis.del(grabbed_key)
         @redis.del(available_key)
@@ -167,7 +164,6 @@ class Redis
         end
         @redis.set(version_key, API_VERSION)
         @redis.persist(exists_key)
-
         set_expiration_if_necessary
       end
     end
